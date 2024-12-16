@@ -6,7 +6,7 @@ async function processTradingWallet(wallet) {
   const results = {
     address: wallet.address,
     login: false,
-    position: false,
+    positions: [], // Changed to array to track multiple positions
   };
 
   try {
@@ -33,38 +33,53 @@ async function processTradingWallet(wallet) {
       const accessToken = loginResponse.data?.data?.accessToken;
 
       if (accessToken) {
-        console.log(`✅ Login successful for ${wallet.address}`);
-        // Create position
-        const priceETH = generateRandomPrice(4000, 10);
-        console.log('priceETH: ', priceETH);
-        const positionResponse = await axios.post(
-          `${API_BASE}/api-gateway/v1/user/requestLeverageOrder`,
-          {
-            direction: 'buy',
-            price: priceETH,
-            quantity: 12,
-            leverage_type: 'cross',
-            base_asset_id: 'ETH',
-            initial_margin: 12,
-            leverage: 1,
-            initial_margin_asset_id: 'USD',
-            order_type: 'LimitOpen',
-            expiration_date: -1,
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
+        // Create 20 positions
+        const positions = [];
+        for (let i = 0; i < 20; i++) {
+          try {
+            const priceETH = generateRandomPrice(4000, 10);
+            console.log(`Position ${i + 1} - priceETH: ${priceETH}`);
+
+            const positionResponse = await axios.post(
+              `${API_BASE}/api-gateway/v1/user/requestLeverageOrder`,
+              {
+                direction: 'buy',
+                price: priceETH,
+                quantity: 12,
+                leverage_type: 'cross',
+                base_asset_id: 'ETH',
+                initial_margin: 12,
+                leverage: 1,
+                initial_margin_asset_id: 'USD',
+                order_type: 'LimitOpen',
+                expiration_date: -1,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  'Content-Type': 'application/json',
+                },
+              }
+            );
+
+            if ([200, 201].includes(positionResponse.status)) {
+              positions.push(true);
+              console.log(
+                `✅ Position ${i + 1} successful for ${wallet.address}`
+              );
+              console.log('positionResponse: ', positionResponse.data);
+            } else {
+              positions.push(false);
+              console.log(`❌ Position ${i + 1} failed for ${wallet.address}`);
+            }
+          } catch (error) {
+            positions.push(false);
+            console.error(
+              `❌ Error creating position ${i + 1}: ${error.message}`
+            );
           }
-        );
-        if ([200, 201].includes(positionResponse.status)) {
-          results.position = true;
-          console.log('positionResponse: ', positionResponse.data);
-          console.log(`✅ Position successful for ${wallet.address}`);
-        } else {
-          console.log(`❌ Position failed for ${wallet.address}`);
         }
+        results.positions = positions;
       }
     } else {
       console.log(`❌ Login failed for ${wallet.address}`);
@@ -84,10 +99,10 @@ async function main() {
   const successRates = results.reduce(
     (acc, result) => {
       if (result.login) acc.login++;
-      if (result.position) acc.position++;
+      acc.positions += result.positions.filter((p) => p).length;
       return acc;
     },
-    { login: 0, position: 0 }
+    { login: 0, positions: 0 }
   );
 
   console.log('\n📊 Success Rates:');
@@ -95,7 +110,10 @@ async function main() {
     `Login: ${((successRates.login / wallets.length) * 100).toFixed(2)}%`
   );
   console.log(
-    `Position: ${((successRates.position / wallets.length) * 100).toFixed(2)}%`
+    `Positions: ${(
+      (successRates.positions / (wallets.length * 20)) *
+      100
+    ).toFixed(2)}%`
   );
 }
 
