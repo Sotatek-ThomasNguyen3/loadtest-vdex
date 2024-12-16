@@ -2,7 +2,7 @@ import axios from 'axios';
 import { API_BASE, WALLET_ADDRESS_TRADING, WALLET_COUNT } from './env.js';
 import { generateRandomPrice, signMessage } from './helpers.js';
 
-async function processTradingWallet(wallet) {
+async function processTradingWallet(wallet, numberOfPositions = 20) {
   const results = {
     address: wallet.address,
     login: false,
@@ -35,7 +35,7 @@ async function processTradingWallet(wallet) {
       if (accessToken) {
         // Create 20 positions
         const positions = [];
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < numberOfPositions; i++) {
           try {
             const priceETH = generateRandomPrice(4000, 10);
             console.log(`Position ${i + 1} - priceETH: ${priceETH}`);
@@ -92,8 +92,11 @@ async function processTradingWallet(wallet) {
 }
 
 async function main() {
+  const numberOfPositions = 20;
   const wallets = [WALLET_ADDRESS_TRADING];
-  const results = await Promise.all(wallets.map(processTradingWallet));
+  const results = await Promise.all(
+    wallets.map((wallet) => processTradingWallet(wallet, numberOfPositions))
+  );
 
   // Calculate success rates
   const successRates = results.reduce(
