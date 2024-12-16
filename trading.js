@@ -1,18 +1,8 @@
 import axios from 'axios';
-import {
-  getWallets,
-  signMessage,
-  generateRandomPrice,
-  deposit,
-  getBalance,
-  sleep,
-} from './helpers.js';
-import { WALLET_COUNT, API_BASE, CHAIN_ID, WETH_ADDRESS } from './env.js';
+import { API_BASE, WALLET_ADDRESS_TRADING, WALLET_COUNT } from './env.js';
+import { generateRandomPrice, signMessage } from './helpers.js';
 
 async function processTradingWallet(wallet) {
-  console.log(
-    `\n🚀 Processing wallet: ${wallet.address} - ${wallet.privateKey}\n`
-  );
   const results = {
     address: wallet.address,
     login: false,
@@ -42,22 +32,8 @@ async function processTradingWallet(wallet) {
       console.log(`✅ Login successful for ${wallet.address}`);
       const accessToken = loginResponse.data?.data?.accessToken;
 
-      // Get balance
-      const balance = await getBalance(WETH_ADDRESS, wallet.privateKey);
-      console.log('balance WETH: ', balance);
-
-      // Deposit
-      const txDeposit = await deposit(
-        '0.05',
-        CHAIN_ID,
-        WETH_ADDRESS,
-        wallet.privateKey
-      );
-      console.log('txDeposit: ', txDeposit.hash);
-
-      if (txDeposit?.hash) {
-        console.log(`✅ Deposit successful for ${wallet.address}`);
-        await sleep(10000); // Wait for deposit to be confirmed
+      if (accessToken) {
+        console.log(`✅ Login successful for ${wallet.address}`);
         // Create position
         const priceETH = generateRandomPrice(4000, 10);
         console.log('priceETH: ', priceETH);
@@ -89,8 +65,6 @@ async function processTradingWallet(wallet) {
         } else {
           console.log(`❌ Position failed for ${wallet.address}`);
         }
-      } else {
-        console.log(`❌ Deposit failed for ${wallet.address}`);
       }
     } else {
       console.log(`❌ Login failed for ${wallet.address}`);
@@ -103,9 +77,7 @@ async function processTradingWallet(wallet) {
 }
 
 async function main() {
-  console.log(`\n🚀 Starting process with ${WALLET_COUNT} wallets...\n`);
-
-  const wallets = await getWallets();
+  const wallets = [WALLET_ADDRESS_TRADING];
   const results = await Promise.all(wallets.map(processTradingWallet));
 
   // Calculate success rates
@@ -120,10 +92,10 @@ async function main() {
 
   console.log('\n📊 Success Rates:');
   console.log(
-    `Login: ${((successRates.login / WALLET_COUNT) * 100).toFixed(2)}%`
+    `Login: ${((successRates.login / wallets.length) * 100).toFixed(2)}%`
   );
   console.log(
-    `Position: ${((successRates.position / WALLET_COUNT) * 100).toFixed(2)}%`
+    `Position: ${((successRates.position / wallets.length) * 100).toFixed(2)}%`
   );
 }
 

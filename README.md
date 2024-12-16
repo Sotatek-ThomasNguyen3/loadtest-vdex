@@ -76,6 +76,8 @@ The repository also includes a trading script (`trading.js`) for automated tradi
 
 ### Running Trading Tests
 
+Before running trading script, you must deposit to exchange.
+Change the following constants in `env.js` with your wallet: address - privateKey
 Execute the trading script:
 
 ```bash
